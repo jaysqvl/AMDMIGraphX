@@ -47,10 +47,10 @@ TEST_CASE(symbolic_binary_explicit_broadcast)
     }
     migraphx::module m2;
     {
-        auto scalar = m2.add_parameter("scalar",
-                                       {migraphx::shape::float_type,
-                                        std::vector<migraphx::shape::dynamic_dimension>{{lit(1)}}});
-        auto values = m2.add_parameter("values", {migraphx::shape::float_type, values_dims});
+        auto scalar    = m2.add_parameter("scalar",
+                                          {migraphx::shape::float_type,
+                                           std::vector<migraphx::shape::dynamic_dimension>{{lit(1)}}});
+        auto values    = m2.add_parameter("values", {migraphx::shape::float_type, values_dims});
         auto broadcast = m2.add_instruction(
             migraphx::make_op("multibroadcast",
                               {{"out_dyn_dims", migraphx::to_value(values_dims)}}),

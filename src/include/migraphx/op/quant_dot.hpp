@@ -110,8 +110,8 @@ struct quant_dot
                            to_string_range(s1.dyn_dims()) + "}");
         }
 
-        std::size_t dim_i = s0.ndim() - 2;
-        std::size_t dim_j = s0.ndim() - 1;
+        std::size_t dim_i           = s0.ndim() - 2;
+        std::size_t dim_j           = s0.ndim() - 1;
         const auto& inner_dim0      = s0.dyn_dims()[dim_j];
         const auto& inner_dim1      = s1.dyn_dims()[dim_i];
         const bool inner_dims_match = (inner_dim0.is_symbolic() or inner_dim1.is_symbolic())
