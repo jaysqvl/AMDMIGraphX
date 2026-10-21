@@ -275,7 +275,8 @@ TEST_CASE(simplify_symbolic_dimensions_maskrcnn_postprocess)
         migraphx::make_op("dyn_slice",
                           {{"axes", {0}},
                            {"starts", {0}},
-                           {"ends", migraphx::value::array{migraphx::to_value(nms_count)}}}),
+                           {"ends", migraphx::value::array{migraphx::to_value(nms_count)}},
+                           {"ends_in_bounds", true}}),
         nms_indices,
         zero,
         num_selected);
@@ -303,7 +304,8 @@ TEST_CASE(simplify_symbolic_dimensions_maskrcnn_postprocess)
         migraphx::make_op("dyn_slice",
                           {{"axes", {1}},
                            {"starts", {0}},
-                           {"ends", migraphx::value::array{migraphx::to_value(nonzero_count)}}}),
+                           {"ends", migraphx::value::array{migraphx::to_value(nonzero_count)}},
+                           {"ends_in_bounds", true}}),
         nonzero_indices,
         zero,
         num_nonzero);
@@ -338,15 +340,17 @@ TEST_CASE(simplify_symbolic_dimensions_maskrcnn_postprocess)
     auto nms_ends = migraphx::from_value<std::vector<migraphx::sym::expr>>(
         nms_slice->get_operator().to_value().at("ends"));
     EXPECT(nms_ends.front() == nms_count);
-    EXPECT(nms_extent == migraphx::sym::min(nms_count, lit(n_boxes)));
+    EXPECT(nms_slice->get_operator().to_value().at("ends_in_bounds").to<bool>());
+    EXPECT(nms_extent == nms_count);
     EXPECT(nms_slice->get_shape().dyn_dims().front().sym_expr == nms_extent);
-    EXPECT(topk_count == resolve_min(lit(k), nms_extent));
+    EXPECT(topk_count == resolve_min(lit(k), nms_count));
     EXPECT(topk_values->get_shape().dyn_dims().front().sym_expr == topk_count);
 
     // NonZero's count becomes the TopK expression selected by the first add input.
     auto nonzero_ends = migraphx::from_value<std::vector<migraphx::sym::expr>>(
         nonzero_slice->get_operator().to_value().at("ends"));
     EXPECT(nonzero_ends.front() == topk_count);
+    EXPECT(nonzero_slice->get_operator().to_value().at("ends_in_bounds").to<bool>());
     EXPECT(nonzero_values->get_shape().dyn_dims().front().sym_expr == topk_count);
     EXPECT(merged->get_shape().dyn_dims().front().sym_expr == topk_count);
     EXPECT(m.get_output_shapes().front().dyn_dims().front().sym_expr == topk_count);

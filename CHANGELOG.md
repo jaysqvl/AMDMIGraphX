@@ -14,6 +14,7 @@ Full documentation for MIGraphX is available at
 ### Changed
 
 * Changed the ONNX `NonMaxSuppression` parser to trim its zero-padded indices output down to the number of selected boxes with a `dyn_slice`, so a parsed model now returns the ONNX specification's `[num_selected_indices, 3]` output instead of a fixed padded size. This removes the `MIGRAPHX_USE_DYNAMIC_NMS` environment variable that previously gated the trim (#5150).
+* Changed `dyn_slice` to accept an `ends_in_bounds` attribute that preserves bounded run-time ends as output dimension symbols and rejects negative ends or ends greater than the sliced axis length (#5392).
 
 ### Resolved issues
 
