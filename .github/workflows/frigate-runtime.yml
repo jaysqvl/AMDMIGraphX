@@ -1,0 +1,176 @@
+name: Frigate AMD runtimes
+
+on:
+  pull_request:
+    paths:
+      - packaging/frigate/**
+      - .github/workflows/frigate-runtime.yml
+  push:
+    branches: [main, build/public-runtime-pipelines]
+    tags: [runtime-v*]
+    paths:
+      - packaging/frigate/**
+      - .github/workflows/frigate-runtime.yml
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: New experimental runtime release tag (runtime-vVERSION)
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frigate-runtime-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Check pinned recipes and publication guards
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          mkdir -p tmp/tests
+          export TMPDIR="$GITHUB_WORKSPACE/tmp/tests"
+          python3 -m unittest discover -s packaging/frigate/tests -v
+          python3 -m unittest discover -s packaging/frigate/common -v
+          python3 -m unittest discover -s packaging/frigate/native101 -v
+          find packaging/frigate -name '*.sh' -exec bash -n {} \;
+
+  release-draft:
+    needs: checks
+    if: >-
+      github.repository == 'jaysqvl/AMDMIGraphX' &&
+      (github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/runtime-v'))
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
+    steps:
+      - name: Reserve a new draft release for this source revision
+        run: |
+          [[ "$RELEASE_TAG" =~ ^runtime-v[0-9][A-Za-z0-9._-]*$ ]]
+          mkdir -p tmp
+          cat > tmp/notes.md <<'EOF'
+          Pinned ROCm runtimes for Frigate. Each profile includes an OCI image digest, a tar archive checksum, source and recipe identities, offline MLIR target checks, native linking checks, and CPU arithmetic results.
+
+          These artifacts are experimental. A successful build is not a hardware compatibility claim. No GPU or production services were accessed. Results from older artifacts do not qualify these new binaries.
+
+          Frigate builds should pin an image digest from the profile JSON. Source locks and recipes live in `packaging/frigate` at this release's commit. This release becomes public only after all four profiles succeed.
+          EOF
+          if gh release view "$RELEASE_TAG" --json isDraft,targetCommitish > tmp/existing.json; then
+            python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          release = json.loads(Path('tmp/existing.json').read_text())
+          assert release['isDraft'] and release['targetCommitish'] == os.environ['GITHUB_SHA'], 'Use a new release tag'
+          PY
+          else
+            gh release create "$RELEASE_TAG" --target "$GITHUB_SHA" --title "$RELEASE_TAG" --notes-file tmp/notes.md --prerelease --draft
+          fi
+
+  build:
+    needs: release-draft
+    runs-on: ubuntu-24.04
+    timeout-minutes: 355
+    permissions:
+      contents: write
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [rocm-7.2.4, rocm-10.1-gfx90c, rocm-10.1-vega, rocm-10.1]
+    env:
+      PROFILE: ${{ matrix.profile }}
+      REQUESTED_TAG: ${{ inputs.release_tag || github.ref_name }}
+      IMAGE: ghcr.io/jaysqvl/frigate-runtime-${{ matrix.profile }}
+      PYTHONDONTWRITEBYTECODE: '1'
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Validate release identity
+        run: |
+          [[ "$REQUESTED_TAG" =~ ^runtime-v[0-9][A-Za-z0-9._-]*$ ]]
+          test -z "$(git status --porcelain)"
+      - name: Make room on this disposable GitHub runner
+        run: |
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL /usr/local/share/powershell
+          df -h .
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build, compile-check, link-check, and package without GPU devices
+        run: |
+          python3 packaging/frigate/runtime.py all --profile "$PROFILE" \
+            --workspace "$GITHUB_WORKSPACE/tmp/runtime" --receipts "$GITHUB_WORKSPACE/tmp/receipts" \
+            --jobs 4 --memory 12g --archive --tag "$IMAGE:$REQUESTED_TAG"
+      - name: Publish the checked runtime
+        run: |
+          docker push "$IMAGE:$REQUESTED_TAG"
+          docker image inspect "$IMAGE:$REQUESTED_TAG" > tmp/image.json
+          python3 - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          profile, image = os.environ['PROFILE'], os.environ['IMAGE']
+          metadata = json.loads(Path(f'tmp/receipts/{profile}-runtime.json').read_text())
+          inspected = json.loads(Path('tmp/image.json').read_text())[0]
+          matches = [ref for ref in inspected['RepoDigests'] if ref.startswith(image + '@sha256:')]
+          assert len(matches) == 1
+          metadata['image'] = matches[0]
+          output = Path('tmp/release')
+          output.mkdir()
+          archive = Path(f'tmp/runtime/{profile}/output/{profile}.tar.gz')
+          assert 0 < archive.stat().st_size < 2 * 1024**3, 'GitHub release assets must be below 2 GiB'
+          with archive.open('rb') as stream:
+              checksum = hashlib.file_digest(stream, 'sha256').hexdigest()
+          metadata['archive'] = {'file': archive.name, 'sha256': checksum, 'bytes': archive.stat().st_size}
+          archive.rename(output / archive.name)
+          (output / f'{profile}.json').write_text(json.dumps(metadata, indent=2) + '\n')
+          (output / f'{profile}.sha256').write_text(checksum + '  ' + archive.name + '\n')
+          PY
+      - name: Upload the payload directly to the draft release
+        run: gh release upload "$REQUESTED_TAG" tmp/release/*
+      - name: Clean up only recorded build containers
+        if: always()
+        run: |
+          if test -f "tmp/receipts/$PROFILE.json"; then
+            python3 packaging/frigate/runtime.py cleanup --profile "$PROFILE" \
+              --workspace "$GITHUB_WORKSPACE/tmp/runtime" --receipts "$GITHUB_WORKSPACE/tmp/receipts"
+          fi
+      - name: Save build evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: evidence-${{ matrix.profile }}
+          path: tmp/receipts/
+          retention-days: 14
+
+  release:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
+    steps:
+      - name: Publish the release after all four profiles passed
+        run: |
+          gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name'
+          gh release edit "$RELEASE_TAG" --draft=false --prerelease

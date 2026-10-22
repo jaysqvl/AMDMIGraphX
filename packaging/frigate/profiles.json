@@ -1,0 +1,76 @@
+{
+  "rocm-7.2.4": {
+    "recipe": "legacy724",
+    "kind": "724",
+    "rocm": "7.2.4",
+    "python_abi": "cp311",
+    "gpu_targets": [
+      "gfx900",
+      "gfx908",
+      "gfx90a",
+      "gfx942",
+      "gfx950",
+      "gfx1030",
+      "gfx1100",
+      "gfx1101",
+      "gfx1200",
+      "gfx1201"
+    ],
+    "cpu_arch": "x86-64-v2",
+    "legacy_rocblas": false,
+    "hipblaslt": true,
+    "composable_kernel": true,
+    "status": "experimental",
+    "description": "ROCm 7.2.4 with Gary's broad MIGraphX target set and legacy gfx900 kernel data"
+  },
+  "rocm-10.1-gfx90c": {
+    "recipe": "native101",
+    "kind": "101",
+    "rocm": "10.1.0",
+    "python_abi": "cp311",
+    "gpu_targets": [
+      "gfx90c"
+    ],
+    "cpu_arch": "x86-64-v2",
+    "legacy_rocblas": true,
+    "hipblaslt": false,
+    "composable_kernel": false,
+    "status": "experimental",
+    "description": "Native gfx90c compatibility profile based on the qualified Ryzen 7 5700G recipe"
+  },
+  "rocm-10.1-vega": {
+    "recipe": "native101",
+    "kind": "101",
+    "rocm": "10.1.0",
+    "python_abi": "cp311",
+    "gpu_targets": [
+      "gfx900",
+      "gfx906",
+      "gfx90c"
+    ],
+    "cpu_arch": "x86-64-v2",
+    "legacy_rocblas": true,
+    "hipblaslt": false,
+    "composable_kernel": false,
+    "status": "experimental",
+    "description": "Source-built legacy rocBLAS for Vega 10, Vega 20, and native gfx90c APUs"
+  },
+  "rocm-10.1": {
+    "recipe": "native101",
+    "kind": "101",
+    "rocm": "10.1.0",
+    "python_abi": "cp311",
+    "gpu_targets": [
+      "gfx1100",
+      "gfx1101",
+      "gfx1200",
+      "gfx1201"
+    ],
+    "cpu_arch": "x86-64-v2",
+    "legacy_rocblas": false,
+    "hipblaslt": true,
+    "composable_kernel": false,
+    "status": "experimental",
+    "description": "RDNA 3 and RDNA 4 profile using the standard AMD SDK rocBLAS and hipBLASLt libraries"
+  }
+}
