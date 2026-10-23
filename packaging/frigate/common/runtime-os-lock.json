@@ -21,21 +21,21 @@
       "group": "runtime-os"
     },
     {
-      "url": "https://deb.debian.org/debian/pool/main/n/numactl/libnuma1_2.0.19-1_amd64.deb",
-      "bytes": 22212,
-      "sha256": "e578583f73f8208564e5035b18aa729c441fc7ecb389c666923552e123f4d655",
+      "url": "https://deb.debian.org/debian/pool/main/n/numactl/libnuma1_2.0.16-1_amd64.deb",
+      "bytes": 20964,
+      "sha256": "639e1ab6bd66ead40db8a22c332d7199679fa22db261cac34444eb8eb4c17dda",
       "package": "libnuma1",
-      "version": "2.0.19-1",
-      "path": "runtime-os/libnuma1_2.0.19-1_amd64.deb",
+      "version": "2.0.16-1",
+      "path": "runtime-os/libnuma1_2.0.16-1_amd64.deb",
       "group": "runtime-os"
     },
     {
-      "url": "https://deb.debian.org/debian/pool/main/l/llvm-toolchain-19/libomp5-19_19.1.7-3%2Bb1_amd64.deb",
-      "bytes": 644612,
-      "sha256": "a18b2ff537431348bcb276ecf7b682040a3991afd03020ebe3c2973fc4747ea8",
+      "url": "https://deb.debian.org/debian/pool/main/l/llvm-toolchain-19/libomp5-19_19.1.7-3~deb12u1_amd64.deb",
+      "bytes": 640968,
+      "sha256": "b994122e353bda568e0bd64e1c12b580c61b7b93bc3141f79407e6bf58642335",
       "package": "libomp5-19",
-      "version": "1:19.1.7-3+b1",
-      "path": "runtime-os/libomp5-19_19.1.7-3+b1_amd64.deb",
+      "version": "1:19.1.7-3~deb12u1",
+      "path": "runtime-os/libomp5-19_19.1.7-3~deb12u1_amd64.deb",
       "group": "runtime-os"
     },
     {
