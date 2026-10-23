@@ -56,18 +56,7 @@ jobs:
         run: |
           test "$RUNNER_ENVIRONMENT" = github-hosted
           sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL /usr/local/share/powershell
-          python3 packaging/frigate/common/source_inputs.py fetch \
-            --lock packaging/frigate/native101/source-lock.json --root tmp/sdk-inputs --group sdk --group device
-          python3 packaging/frigate/native101/expand_sdk.py --inputs tmp/sdk-inputs/sdk \
-            --destination tmp/sdk --source tmp/sdk-source
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          profiles = json.loads(Path('packaging/frigate/profiles.json').read_text())
-          Path('tmp/modern-profile.json').write_text(json.dumps(profiles['rocm-10.1']))
-          PY
-          python3 packaging/frigate/kernel_data.py --root tmp/sdk/_rocm_sdk_devel \
-            --profile tmp/modern-profile.json
+          python3 packaging/frigate/tests/check_sdk.py
       - name: Check packaging from an unprivileged host with root-owned outputs
         env:
           PYTHONDONTWRITEBYTECODE: '1'
@@ -77,7 +66,9 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: packaging-preflight
-          path: tmp/packaging-fixture/receipts/
+          path: |
+            tmp/packaging-fixture/receipts/
+            tmp/sdk-fixture/receipts/
           retention-days: 14
 
   release-draft:
