@@ -20,10 +20,18 @@ def x86_elf(path: Path) -> bool:
 
 
 def check_linking(root: Path) -> dict:
-    """Resolve dependencies and relocations, then import the CPython binding."""
+    """Resolve the detector's dependency closure, then import its CPython binding."""
     binding = root / "lib/migraphx.cpython-311-x86_64-linux-gnu.so"
     assert binding.is_file()
-    paths = {path.resolve() for path in (root / "lib").rglob("*.so*") if path.is_file()}
+    # ldd -r follows DT_NEEDED dependencies recursively. Start with our detector
+    # libraries and tools, rather than unrelated SDK profiler/Python plugins
+    # whose symbols are intentionally provided by their loading application.
+    paths = {
+        path.resolve()
+        for path in (root / "lib/migraphx/lib").rglob("*.so*")
+        if path.is_file()
+    }
+    paths.add(binding.resolve())
     paths |= {
         root / "bin" / name
         for name in ("migraphx-driver", "migraphx-hiprtc-driver", "rocminfo")
