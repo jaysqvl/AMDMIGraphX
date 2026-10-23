@@ -50,6 +50,13 @@ jobs:
           python3 packaging/frigate/common/source_inputs.py fetch \
             --lock packaging/frigate/common/runtime-os-lock.json --root tmp/os-inputs
           python3 packaging/frigate/common/check_os_abi.py --root tmp/os-inputs
+      - name: Check the modern SDK's real device-package layout before source builds
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL /usr/local/share/powershell
+          python3 packaging/frigate/tests/check_sdk.py
       - name: Check packaging from an unprivileged host with root-owned outputs
         env:
           PYTHONDONTWRITEBYTECODE: '1'
@@ -59,7 +66,9 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: packaging-preflight
-          path: tmp/packaging-fixture/receipts/
+          path: |
+            tmp/packaging-fixture/receipts/
+            tmp/sdk-fixture/receipts/
           retention-days: 14
 
   release-draft:
@@ -142,26 +151,9 @@ jobs:
         run: |
           docker push "$IMAGE:$REQUESTED_TAG"
           docker image inspect "$IMAGE:$REQUESTED_TAG" > tmp/image.json
-          python3 - <<'PY'
-          import hashlib, json, os
-          from pathlib import Path
-          profile, image = os.environ['PROFILE'], os.environ['IMAGE']
-          metadata = json.loads(Path(f'tmp/receipts/{profile}-runtime.json').read_text())
-          inspected = json.loads(Path('tmp/image.json').read_text())[0]
-          matches = [ref for ref in inspected['RepoDigests'] if ref.startswith(image + '@sha256:')]
-          assert len(matches) == 1
-          metadata['image'] = matches[0]
-          output = Path('tmp/release')
-          output.mkdir()
-          archive = Path(f'tmp/runtime/{profile}/output/{profile}.tar.gz')
-          assert 0 < archive.stat().st_size < 2 * 1024**3, 'GitHub release assets must be below 2 GiB'
-          with archive.open('rb') as stream:
-              checksum = hashlib.file_digest(stream, 'sha256').hexdigest()
-          metadata['archive'] = {'file': archive.name, 'sha256': checksum, 'bytes': archive.stat().st_size}
-          archive.rename(output / archive.name)
-          (output / f'{profile}.json').write_text(json.dumps(metadata, indent=2) + '\n')
-          (output / f'{profile}.sha256').write_text(checksum + '  ' + archive.name + '\n')
-          PY
+          python3 packaging/frigate/release_payload.py --profile "$PROFILE" --image "$IMAGE" \
+            --inspection tmp/image.json --metadata "tmp/receipts/$PROFILE-runtime.json" \
+            --archive "tmp/runtime/$PROFILE/output/$PROFILE.tar.gz" --output tmp/release
       - name: Upload the payload directly to the draft release
         run: gh release upload "$REQUESTED_TAG" tmp/release/*
       - name: Clean up only recorded build containers

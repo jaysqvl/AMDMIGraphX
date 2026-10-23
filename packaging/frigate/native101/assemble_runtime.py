@@ -59,7 +59,9 @@ def main() -> None:
     if (ROOT / "usr").exists():
         shutil.rmtree(ROOT / "usr")
     SDK_DEST.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(SDK, SDK_DEST, symlinks=True)
+    # AMD links device data into both SDK views. Preserve those hardlinks so
+    # the exported image/archive does not contain a second copy of every kernel.
+    subprocess.run(["cp", "-a", str(SDK), str(SDK_DEST)], check=True)
     alias = ROOT / "opt/rocm-10.1.0"
     alias.unlink(missing_ok=True)
     alias.symlink_to("rocm-python/_rocm_sdk_devel")

@@ -59,6 +59,19 @@ class Profiles(unittest.TestCase):
             json.loads(result.stdout)["gpu_targets"], ["gfx900", "gfx906", "gfx90c"]
         )
 
+    def test_only_modern_profiles_fetch_vendor_device_packages(self):
+        runtime = Runtime.__new__(Runtime)
+        runtime.lock = {
+            "artifacts": [{"group": group} for group in ("sdk", "source", "device")]
+        }
+        for profile, expected in (("rocm-10.1", True), ("rocm-10.1-vega", False)):
+            runtime.configuration = PROFILES[profile]
+            for mode in ("fetch", "verify"):
+                command = runtime.source_inputs_command(mode)
+                self.assertEqual("--group device" in command, expected)
+                self.assertIn("--group sdk", command)
+                self.assertIn("--group source", command)
+
     def test_explicit_memory_units(self):
         self.assertEqual(memory_bytes("12g"), 12 * 1024**3)
         for invalid in ("0", "12gb", "-1", "unlimited"):

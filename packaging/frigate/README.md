@@ -23,6 +23,13 @@ uses the SDK's BLAS and disables CK, which that SDK does not provide. The small
 `retarget_logic.py` preserves the original gfx900 tuning and adds its gfx90c
 architecture variant; it does not rewrite compiled ISA tags.
 
+Enabled BLAS backends include their external device kernels and tuning metadata.
+The 7.2.4 runtime keeps the complete vendor hipBLASLt bundle, while modern 10.1
+includes AMD's four pinned device wheels and their kpack files. Vega 10.1 builds
+its rocBLAS kernels from source. An offline presence check rejects missing
+target data before compilation and checks the exported runtime again. These
+file checks do not substitute for testing on each GPU.
+
 ## Build and release
 
 Use a dedicated Linux amd64 Docker host, Python 3.11+, at least 16 GiB RAM, and
@@ -56,6 +63,16 @@ archive, checksum, and profile JSON. The release is published as a prerelease
 only after all four profiles succeed. A failure keeps the release in draft.
 Large runtime payloads go directly to Releases; only small build logs use
 Actions artifact storage.
+
+Archives over 1900 MiB are split into numbered parts, preserving both per-part
+and whole-archive SHA256 hashes in the profile JSON. Download all parts together
+and reconstruct them before extraction, for example:
+
+```sh
+sha256sum -c rocm-7.2.4.parts.sha256
+cat rocm-7.2.4.tar.gz.part* > rocm-7.2.4.tar.gz
+sha256sum -c rocm-7.2.4.sha256
+```
 
 The profile JSON records the exact source commit, recipe and lock hashes,
 compiler targets, verification results, archive checksum, and OCI digest.

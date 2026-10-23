@@ -1199,6 +1199,34 @@
       "url": "https://deb.debian.org/debian/pool/main/p/pyyaml/python3-yaml_6.0-3%2bb2_amd64.deb",
       "sha256": "8d0db0b3099298fe039b94e4c52a6987798a90d23b80de3ac13c3cb75cf622a2",
       "bytes": 119168
+    },
+    {
+      "path": "sdk/rocm_sdk_device_gfx1100-10.1.0-py3-none-linux_x86_64.whl",
+      "group": "device",
+      "url": "https://stable.repo.amd.com/rocm/core/whl-next/rocm-sdk-device-gfx1100/rocm_sdk_device_gfx1100-10.1.0-py3-none-linux_x86_64.whl",
+      "bytes": 233374792,
+      "sha256": "55fc9d7505c78178060d11bc8dc44b52b3e715f319bd61dd7e7f37c5bec2a94d"
+    },
+    {
+      "path": "sdk/rocm_sdk_device_gfx1101-10.1.0-py3-none-linux_x86_64.whl",
+      "group": "device",
+      "url": "https://stable.repo.amd.com/rocm/core/whl-next/rocm-sdk-device-gfx1101/rocm_sdk_device_gfx1101-10.1.0-py3-none-linux_x86_64.whl",
+      "bytes": 227269260,
+      "sha256": "518834a7706da3f448a780d6ec0f96c2d3b4246b6e2b7cc503a5ee219c786b13"
+    },
+    {
+      "path": "sdk/rocm_sdk_device_gfx1200-10.1.0-py3-none-linux_x86_64.whl",
+      "group": "device",
+      "url": "https://stable.repo.amd.com/rocm/core/whl-next/rocm-sdk-device-gfx1200/rocm_sdk_device_gfx1200-10.1.0-py3-none-linux_x86_64.whl",
+      "bytes": 405199317,
+      "sha256": "60433865c41a1a0cf25f1ecf850b8109c11385d8fdb16b229efbc314f77906b1"
+    },
+    {
+      "path": "sdk/rocm_sdk_device_gfx1201-10.1.0-py3-none-linux_x86_64.whl",
+      "group": "device",
+      "url": "https://stable.repo.amd.com/rocm/core/whl-next/rocm-sdk-device-gfx1201/rocm_sdk_device_gfx1201-10.1.0-py3-none-linux_x86_64.whl",
+      "bytes": 343467033,
+      "sha256": "78e4360ff25872598563acf4bccaab2360e9f837601c74cf273640ad395cbe01"
     }
   ]
 }
