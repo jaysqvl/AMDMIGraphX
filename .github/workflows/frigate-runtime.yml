@@ -50,6 +50,17 @@ jobs:
           python3 packaging/frigate/common/source_inputs.py fetch \
             --lock packaging/frigate/common/runtime-os-lock.json --root tmp/os-inputs
           python3 packaging/frigate/common/check_os_abi.py --root tmp/os-inputs
+      - name: Check packaging from an unprivileged host with root-owned outputs
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python3 packaging/frigate/tests/check_packaging.py
+      - name: Preserve packaging ownership and cleanup evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: packaging-preflight
+          path: tmp/packaging-fixture/receipts/
+          retention-days: 14
 
   release-draft:
     needs: checks

@@ -191,6 +191,7 @@ class Runtime:
             and path.suffix in {".py", ".sh", ".json", ".txt", ".patch", ".sha256"}
         ]
         entries += [
+            (HERE / "runtime.py", "recipes/runtime.py"),
             (HERE / "common/source_inputs.py", "recipes/source_inputs.py"),
             (HERE / "common/runtime-os-lock.json", "recipes/runtime-os-lock.json"),
             (HERE / "verify_runtime.py", "recipes/verify_runtime.py"),
@@ -588,6 +589,19 @@ python3 /recipes/verify_runtime.py --profile /recipes/profile.json --output /out
         self.journal["verification"] = json.loads(result.stdout)
         self.save()
 
+    def install_manifest(self, manifest):
+        """Write metadata into root-owned outputs through a recorded container."""
+        self.write_remote_json("output/runtime.json", manifest)
+        self.run(
+            "manifest",
+            DEBIAN,
+            "install -D -m 0644 /manifest.json /runtime/usr/share/frigate-rocm/runtime.json\n",
+            [
+                (self.remote + "/output/runtime.json", "/manifest.json", True),
+                (self.remote + "/runtime", "/runtime", False),
+            ],
+        )
+
     def package(self):
         """Export only a checked runtime, independently of any Frigate image."""
         self.require_passed(
@@ -605,9 +619,7 @@ python3 /recipes/verify_runtime.py --profile /recipes/profile.json --output /out
             "verification": self.journal["verification"],
             "gpu_tested": False,
         }
-        self.host(["mkdir", "-p", self.remote + "/runtime/usr/share/frigate-rocm"])
-        self.write_remote_json("runtime/usr/share/frigate-rocm/runtime.json", manifest)
-        self.write_remote_json("output/runtime.json", manifest)
+        self.install_manifest(manifest)
         self.upload([(HERE / "Dockerfile", "Dockerfile")])
         tag = self.args.tag or "amd-runtime:" + self.name + "-" + self.journal["owner"]
         with (self.directory / (self.name + "-package.log")).open("w") as log:

@@ -46,6 +46,9 @@ The **Frigate AMD runtimes** workflow runs cheap checks for changes here.
 It verifies the exported NUMA/OpenMP libraries against Debian 12's symbol ABI
 before starting the source builds. HIPRTC headers are packaged separately from
 glibc's runtime libraries; the application OS is not upgraded.
+A small fixture also packages root-owned files as an unprivileged Linux host,
+checks its OCI/archive output, and removes its recorded containers and image.
+The real runtime checks remain mandatory; this fixture contains no AMD binaries.
 To publish all four profiles, dispatch it with a new `runtime-vVERSION` tag, or
 push such a tag. It reserves a draft GitHub Release, builds each profile on a
 disposable GitHub runner, pushes the checked runtime to GHCR, and uploads the
