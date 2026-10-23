@@ -616,13 +616,16 @@ python3 /recipes/verify_runtime.py --profile /recipes/profile.json --output /out
         self.save()
 
     def install_manifest(self, manifest):
-        """Write metadata into root-owned outputs through a recorded container."""
+        """Publish readable payload files without changing protected host recipes."""
         self.write_remote_json("output/runtime.json", manifest)
         self.run(
             "manifest",
             DEBIAN,
             "install -D -m 0644 /manifest.json /runtime/usr/share/frigate-rocm/runtime.json\n"
-            "chmod 0755 /runtime\n",
+            # Source locks copied from protected host inputs can retain mode
+            # 0600. The public payload must be readable by archive exporters
+            # and non-root consumers; preserve its existing executable bits.
+            "chmod -R a+rX /runtime\n",
             [
                 (self.remote + "/output/runtime.json", "/manifest.json", True),
                 (self.remote + "/runtime", "/runtime", False),
