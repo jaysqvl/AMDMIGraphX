@@ -595,7 +595,8 @@ python3 /recipes/verify_runtime.py --profile /recipes/profile.json --output /out
         self.run(
             "manifest",
             DEBIAN,
-            "install -D -m 0644 /manifest.json /runtime/usr/share/frigate-rocm/runtime.json\n",
+            "install -D -m 0644 /manifest.json /runtime/usr/share/frigate-rocm/runtime.json\n"
+            "chmod 0755 /runtime\n",
             [
                 (self.remote + "/output/runtime.json", "/manifest.json", True),
                 (self.remote + "/runtime", "/runtime", False),

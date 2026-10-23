@@ -16,6 +16,7 @@ def main():
     """Check filesystem ownership, OCI export, archive contents and exact cleanup."""
     if os.geteuid() == 0:
         raise RuntimeError("Run the packaging fixture as an unprivileged Docker user")
+    os.umask(0o077)
     fixture = ROOT / "tmp/packaging-fixture"
     args = argparse.Namespace(
         profile="rocm-10.1-gfx90c",
@@ -25,6 +26,7 @@ def main():
         memory="512m",
         cpuset=None,
         ssh_host=None,
+        socket="unix:///var/run/docker.sock",
         tag=None,
         archive=True,
     )
@@ -55,8 +57,19 @@ def main():
         image = runtime.journal["candidate"]["id"]
         manifest = json.loads((protected / "frigate-rocm/runtime.json").read_text())
         assert manifest["verification"] == {"fixture_only": True}
+        runtime.run(
+            "fixture-consumer",
+            DEBIAN,
+            'test "$(id -u)" = 1000\n'
+            "test -r /payload/usr/share/frigate-rocm/runtime.json\n"
+            'test "$(cat /payload/usr/share/fixture.txt)" = "$FIXTURE_OWNER"\n',
+            [(runtime.remote + "/runtime", "/payload", True)],
+            user="1000:1000",
+            env=("FIXTURE_OWNER=" + runtime.journal["owner"],),
+        )
         archive = Path(runtime.remote) / "output" / (runtime.name + ".tar.gz")
         with tarfile.open(archive, "r:gz") as exported:
+            assert exported.getmember(".").mode == 0o755
             metadata = exported.extractfile("./usr/share/frigate-rocm/runtime.json")
             assert metadata is not None and json.load(metadata) == manifest
             payload = exported.extractfile("./usr/share/fixture.txt")
