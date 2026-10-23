@@ -10,6 +10,7 @@ from array import array
 from pathlib import Path
 
 from gfx90c_code import inspect_code
+from kernel_data import check_kernel_data
 
 
 def x86_elf(path: Path) -> bool:
@@ -109,6 +110,7 @@ def main():
     assert manifest["runtime"]["rocm"] == profile["rocm"]
     assert manifest["gpu_qualified"] is False
     result = {
+        **check_kernel_data(root, profile),
         **check_linking(root),
         **check_reference(),
         **check_compiler(profile),

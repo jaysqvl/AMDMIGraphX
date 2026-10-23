@@ -9,33 +9,14 @@ export CMAKE_BUILD_PARALLEL_LEVEL="${BUILD_JOBS:-12}"
 export PYTHONPATH="$prefix/sdk"
 mkdir -p "$prefix/sdk" /work /opt/cmake
 
-# Use AMD's package expansion code, without pip resolution or GPU discovery.
-python3 - <<'PY'
-import shutil
-import os
-import tarfile
-import zipfile
-from pathlib import Path
-
-sdk = Path('/opt/owned-deps/sdk')
-if not (sdk / '.expanded').exists():
-    for path in sorted(Path('/inputs/sdk').glob('*.whl')):
-        with zipfile.ZipFile(path) as wheel:
-            wheel.extractall(sdk)
-            for entry in wheel.infolist():
-                mode = entry.external_attr >> 16 & 0o777
-                if mode and not entry.is_dir():
-                    os.chmod(sdk / entry.filename, mode)
-    with tarfile.open('/inputs/sdk/rocm-10.1.0.tar.gz') as archive:
-        source = next(member.name.rsplit('/src/rocm_sdk/', 1)[0] for member in archive
-                      if '/src/rocm_sdk/' in member.name)
-        archive.extractall('/work/sdk-source')
-    shutil.copytree(Path('/work/sdk-source') / source / 'src/rocm_sdk',
-                    sdk / 'rocm_sdk', dirs_exist_ok=True)
-PY
-python3 -m rocm_sdk init
-touch "$prefix/sdk/.expanded"
+# Use the same SDK initialization exercised by the Linux preflight.
+python3 /recipes/expand_sdk.py
 ln -sfn "$prefix/sdk/_rocm_sdk_devel" /opt/rocm
+# Legacy rocBLAS data is built below. The modern profile must already contain
+# the locked per-device packages before spending time compiling the stack.
+if [ "${BUILD_LEGACY_ROCBLAS:-1}" = 0 ]; then
+    python3 /recipes/kernel_data.py --root /opt/rocm --profile /recipes/profile.json
+fi
 export ROCM_PATH=/opt/rocm
 export HIP_PATH=/opt/rocm
 export PATH="/opt/cmake/bin:/opt/rocm/bin:/opt/rocm/lib/llvm/bin:$PATH"

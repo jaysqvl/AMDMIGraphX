@@ -113,6 +113,11 @@ def main() -> None:
     shutil.copytree(
         ROCM / "lib/rocblas/library", DEST / "lib/rocblas/library", symlinks=True
     )
+    # hipBLASLt resolves these files relative to its shared library. Keep the
+    # complete vendor bundle, including shared metadata and fallback kernels.
+    shutil.copytree(
+        ROCM / "lib/hipblaslt/library", DEST / "lib/hipblaslt/library", symlinks=True
+    )
     subprocess.run(
         ["dpkg-deb", "-x", "/inputs/sources/rocblas-gfx900.deb", "/legacy-kernels"],
         check=True,

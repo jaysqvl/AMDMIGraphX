@@ -21,7 +21,17 @@
     "hipblaslt": true,
     "composable_kernel": true,
     "status": "experimental",
-    "description": "ROCm 7.2.4 with Gary's broad MIGraphX target set and legacy gfx900 kernel data"
+    "description": "ROCm 7.2.4 with Gary's broad MIGraphX target set and legacy gfx900 kernel data",
+    "hipblaslt_targets": [
+      "gfx908",
+      "gfx90a",
+      "gfx942",
+      "gfx950",
+      "gfx1100",
+      "gfx1101",
+      "gfx1200",
+      "gfx1201"
+    ]
   },
   "rocm-10.1-gfx90c": {
     "recipe": "native101",
@@ -36,7 +46,8 @@
     "hipblaslt": false,
     "composable_kernel": false,
     "status": "experimental",
-    "description": "Native gfx90c compatibility profile based on the qualified Ryzen 7 5700G recipe"
+    "description": "Native gfx90c compatibility profile based on the qualified Ryzen 7 5700G recipe",
+    "hipblaslt_targets": []
   },
   "rocm-10.1-vega": {
     "recipe": "native101",
@@ -53,7 +64,8 @@
     "hipblaslt": false,
     "composable_kernel": false,
     "status": "experimental",
-    "description": "Source-built legacy rocBLAS for Vega 10, Vega 20, and native gfx90c APUs"
+    "description": "Source-built legacy rocBLAS for Vega 10, Vega 20, and native gfx90c APUs",
+    "hipblaslt_targets": []
   },
   "rocm-10.1": {
     "recipe": "native101",
@@ -71,6 +83,12 @@
     "hipblaslt": true,
     "composable_kernel": false,
     "status": "experimental",
-    "description": "RDNA 3 and RDNA 4 profile using the standard AMD SDK rocBLAS and hipBLASLt libraries"
+    "description": "RDNA 3 and RDNA 4 profile using the standard AMD SDK rocBLAS and hipBLASLt libraries",
+    "hipblaslt_targets": [
+      "gfx1100",
+      "gfx1101",
+      "gfx1200",
+      "gfx1201"
+    ]
   }
 }

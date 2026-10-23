@@ -40,6 +40,11 @@ def validate_profile(name: str) -> dict:
         raise ValueError("The legacy rocBLAS profile disables CK and hipBLASLt")
     if profile["python_abi"] != "cp311":
         raise ValueError("The current source locks require CPython 3.11")
+    if (
+        not set(profile["hipblaslt_targets"]) <= set(profile["gpu_targets"])
+        or bool(profile["hipblaslt_targets"]) != profile["hipblaslt"]
+    ):
+        raise ValueError("Declare the enabled hipBLASLt targets explicitly")
     return profile
 
 
@@ -195,6 +200,7 @@ class Runtime:
             (HERE / "common/source_inputs.py", "recipes/source_inputs.py"),
             (HERE / "common/runtime-os-lock.json", "recipes/runtime-os-lock.json"),
             (HERE / "verify_runtime.py", "recipes/verify_runtime.py"),
+            (HERE / "kernel_data.py", "recipes/kernel_data.py"),
             (HERE / "Dockerfile", "Dockerfile"),
             (HERE / ".dockerignore", ".dockerignore"),
         ]
@@ -441,8 +447,7 @@ class Runtime:
             image = DEBIAN
             setup = """(cd /inputs && sha256sum -c /recipes/builder-inputs.sha256)
     apt-get -y --no-install-recommends -o Dir::Etc::sourcelist=/dev/null -o Dir::Etc::sourceparts=- install /inputs/builder/*.deb
-    python3 /recipes/source_inputs.py verify --lock /recipes/source-lock.json --root /inputs
-    """
+    """ + self.source_inputs_command("verify")
         self.run(
             "compiler",
             image,
@@ -467,8 +472,8 @@ class Runtime:
     def fetch(self):
         """Verify cached inputs and fetch absent files before entering offline mode."""
         script = (
-            "python3 /recipes/source_inputs.py fetch --lock /recipes/source-lock.json --root /inputs\n"
-            "python3 /recipes/source_inputs.py fetch --lock /recipes/runtime-os-lock.json --root /inputs\n"
+            self.source_inputs_command("fetch")
+            + "python3 /recipes/source_inputs.py fetch --lock /recipes/runtime-os-lock.json --root /inputs\n"
         )
         self.run(
             "fetch",
@@ -481,12 +486,29 @@ class Runtime:
             network="bridge",
         )
 
+    def source_inputs_command(self, mode):
+        """Keep modern SDK device packages out of source-built Vega BLAS profiles."""
+        groups = sorted(
+            {
+                entry["group"]
+                for entry in self.lock["artifacts"]
+                if entry["group"] != "device"
+                or not self.configuration["legacy_rocblas"]
+            }
+        )
+        flags = "".join(" --group " + shlex.quote(group) for group in groups)
+        return (
+            f"python3 /recipes/source_inputs.py {mode} --lock /recipes/source-lock.json "
+            f"--root /inputs{flags}\n"
+        )
+
     def build(self):
         """Build both variants through the same stage runner."""
         if self.profile == "724":
             script = """python3 /recipes/source_inputs.py verify --lock /recipes/source-lock.json --root /inputs --group sdk --group source --group tool --group legacy-kernels
     dpkg --unpack /inputs/sdk/*.deb
     dpkg --configure --pending
+    python3 /recipes/kernel_data.py --root /opt/rocm --profile /recipes/profile.json --component hipblaslt
     BUILD_JOBS=$BUILD_JOBS nice -n 10 bash /recipes/build_source.sh
     rm -rf /runtime/opt/rocm-7.2.4
     python3 /recipes/assemble_runtime.py
@@ -518,12 +540,16 @@ class Runtime:
             self.run("binding", DEBIAN, script, mounts)
         else:
             # Minimal Debian has no Python until the verified bootstrap is installed.
-            script = """(cd /inputs && sha256sum -c /recipes/builder-inputs.sha256)
+            script = (
+                """(cd /inputs && sha256sum -c /recipes/builder-inputs.sha256)
     apt-get -y --no-install-recommends -o Dir::Etc::sourcelist=/dev/null -o Dir::Etc::sourceparts=- install /inputs/builder/*.deb
-    python3 /recipes/source_inputs.py verify --lock /recipes/source-lock.json --root /inputs
+    """
+                + self.source_inputs_command("verify")
+                + """
     BUILD_JOBS=$BUILD_JOBS nice -n 10 bash /recipes/build_source.sh
     python3 /recipes/assemble_runtime.py
     """
+            )
             self.run("source", DEBIAN, script, self.mounts())
 
     def require_passed(self, stages):
