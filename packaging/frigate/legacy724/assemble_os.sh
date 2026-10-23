@@ -17,9 +17,9 @@ mkdir -p /runtime/usr/share/doc
 cp -a /os-packages/usr/share/doc/. /runtime/usr/share/doc/
 cp /recipes/runtime-os-lock.json /runtime/opt/rocm-7.2.4/share/frigate/
 cp /metadata/source-build.json /runtime/opt/rocm-7.2.4/share/frigate/
-# Verify these are the exact NUMA/OpenMP binaries used by the accepted runtime.
-echo 'c3c046679e00b24819cc9410f9efb63a402a96ebd7cabf7f787234fc933ced0e  /runtime/usr/lib/x86_64-linux-gnu/libnuma.so.1.0.0' | sha256sum -c -
-echo '822498850962f32c8c967e6c4795aded591c93cc0a2e8d20ad58b04ccba4aea0  /runtime/usr/lib/x86_64-linux-gnu/libomp.so.5' | sha256sum -c -
+# Pin the Bookworm builds; the Trixie variants require a newer glibc.
+echo 'bb2bb9250f348587ea3b7594a0a22055312134e55d065434d1f7e22e99ebf1d5  /runtime/usr/lib/x86_64-linux-gnu/libnuma.so.1.0.0' | sha256sum -c -
+echo 'a325b385161f49ce5593f1f341fe30c6f9c95a22502855ad7c3b1a83c93397bd  /runtime/usr/lib/x86_64-linux-gnu/libomp.so.5' | sha256sum -c -
 python3 - <<'PY'
 import hashlib
 import json

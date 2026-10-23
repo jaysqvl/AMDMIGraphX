@@ -42,6 +42,14 @@ jobs:
           python3 -m unittest discover -s packaging/frigate/common -v
           python3 -m unittest discover -s packaging/frigate/native101 -v
           find packaging/frigate -name '*.sh' -exec bash -n {} \;
+      - name: Check pinned OS library ABI before expensive builds
+        env:
+          TMPDIR: ${{ github.workspace }}/tmp/tests
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python3 packaging/frigate/common/source_inputs.py fetch \
+            --lock packaging/frigate/common/runtime-os-lock.json --root tmp/os-inputs
+          python3 packaging/frigate/common/check_os_abi.py --root tmp/os-inputs
 
   release-draft:
     needs: checks
